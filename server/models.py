@@ -40,7 +40,7 @@ class UserSchema(Schema):
     id = fields.Int()
     username = fields.String()
 
-    articles = fields.List(fields.Nested(lambda: ArticlesSchema(exclude=("user",))))
+    articles = fields.List(fields.Nested(lambda: ArticleSchema(exclude=("user",))))
 
 class ArticleSchema(Schema):
     id = fields.Int()

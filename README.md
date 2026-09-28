@@ -1,123 +1,67 @@
-# Lab: Authorizing Requests
+# Lorem Blogum
 
-## Scenario
+A small blog with a Flask API and a React client. Anyone can browse articles, with a three-article limit for guests. Signing in with a username stores that user in the Flask session and unlocks member-only articles.
 
-In this lab, we'll continue working on the blog site, and add some features that
-only logged in users have access to.
+![Signed-in member articles](screenshots/members-only.png)
 
-## Tools & Resources
+## Features
 
-- [GitHub Repo](https://github.com/learn-co-curriculum/flask-authorizing-requests-lab)
-- [What is Authentication? - auth0](https://auth0.com/intro-to-iam/what-is-authentication)
-- [API - Flask: class flask.session](https://flask.palletsprojects.com/en/2.2.x/api/#flask.session)
+- List and read articles at `/articles` and `/articles/<id>`.
+- Guests can read three articles per session. After that, `GET /articles/<id>` returns `401` with `{"message": "Maximum pageview limit reached"}`.
+- Log in with an existing username. The API saves `user_id` on the session cookie.
+- Signed-in users skip the pageview limit, and the session survives a refresh via `GET /check_session`.
+- Member-only articles live at `/members_only_articles`. Guests receive `401` and `{"error": "Unauthorized"}`. Signed-in users receive only articles where `is_member_only` is true, and can open one by id at `/members_only_articles/<id>`.
 
-## Set Up
+## API
 
-There is some starter code in place for a Flask API backend and a React frontend.
-To get set up, run:
+| Method | Path | Who can use it |
+| --- | --- | --- |
+| `GET` | `/articles` | Anyone |
+| `GET` | `/articles/<id>` | Anyone, with a guest pageview limit |
+| `POST` | `/login` | Body: `{"username": "..."}`. Returns the user, or `401` if the username is unknown |
+| `DELETE` | `/logout` | Clears `user_id` |
+| `GET` | `/check_session` | Returns the current user, or `401` |
+| `GET` | `/members_only_articles` | Signed-in users only |
+| `GET` | `/members_only_articles/<id>` | Signed-in users only |
+| `DELETE` | `/clear` | Clears `user_id` and `page_views` |
+
+## Setup
+
+Python dependencies are in the `Pipfile`. The client proxies API requests to `http://localhost:5555`.
 
 ```bash
-pipenv install; pipenv shell
+pipenv install
+pipenv shell
 npm install --prefix client
 cd server
 flask db upgrade
 python seed.py
 ```
 
-You can work on this lab by running the tests with `pytest -x`. It will also be
-helpful to see what's happening during the request/response cycle by running the
-app in the browser. You can run the Flask server with:
+`seed.py` creates users and articles. Member-only rows are about one third of the articles. Use any seeded username to log in (passwords are not part of this app).
+
+## Run
+
+In one terminal, from `server`:
 
 ```bash
 python app.py
 ```
 
-And you can run React in another terminal from the root project directory with:
+The API listens on port 5555. In another terminal, from the project root:
 
 ```bash
 npm start --prefix client
 ```
 
-You don't have to make any changes to the React code to get this lab working.
+The client listens on port 4000. Open it, log in, then use **Click here for exclusive member-only content!** Guests see `Unauthorized` on that page.
 
-## Instructions
+## Tests
 
-### Task 1: Define the Problem
-
-Now that we've got the basic login feature working, we need to reward our logged
-in users with some bonus content that only users who have logged in will be able
-to access.
-
-### Task 2: Determine the Design
-
-We added a new attribute to our articles, `is_member_only`, to reflect whether
-the article should only be available to authorized users of the site. We also
-created two new views: `MemberOnlyIndex` and `MemberOnlyArticle`.
-
-Your goal is to add the following functionality to the new views:
-
-- If a user is not signed in, the `get()` methods in each view should return a
-  status code of 401 unauthorized, along with an error message.
-- If the user is signed in, the `get()` methods in each view should return the
-  JSON data for the members-only articles and the members-only article by ID, respectively.
-
-### Task 3: Develop, Test, and Refine the Code
-
-#### Step 1: Check Current User for Authorization
-
-Use the `session` to find if the user is logged in or not.
-
-#### Step 2: Update Logic and Response if User is Authorized
-
-If a user is not signed in, the `get()` methods in each view should return a
-status code of 401 unauthorized, along with an error message.
-
-#### Step 3: Update Logic and Response if User is not Authorized
-
-If a user is not signed in, the `get()` methods in each view should return a
-status code of 401 unauthorized, along with an error message.
-
-#### Step 4: Test and Refine the Code
-
-Run the test suite:
+From the project root, with the virtualenv active:
 
 ```bash
 pytest
 ```
 
-If any tests aren't passing, refine your code using each error message.
-
-View the app in browser and test login, logout, and session persistence. Refine code if needed.
-
-Feel free to also take a look at how the frontend logic is set up to use these endpoints.
-
-#### Step 5: Commit and Push Git History
-
-* Commit and push your code:
-
-```bash
-git add .
-git commit -m "final solution"
-git push
-```
-
-* If you created a separate feature branch, remember to open a PR on main and merge.
-
-### Task 4: Document and Maintain
-Best Practice documentation steps:
-* Add comments to the code to explain purpose and logic, clarifying intent and functionality of your code to other developers.
-* Update README text to reflect the functionality of the application following https://makeareadme.com. 
-  * Add screenshot of completed work included in Markdown in README.
-* Delete any stale branches on GitHub
-* Remove unnecessary/commented out code
-* If needed, update git ignore to remove sensitive data
-
-## Important Submission Note
-
-Before you submit your solution, you need to save your progress with git.
-
-1. Add your changes to the staging area by executing `git add .`.
-2. Create a commit by executing `git commit -m "Your commit message"`.
-3. Push your commits to GitHub by executing `git push origin main`.
-
-CodeGrade will grade your lab using the same tests as are provided in the `testing/` directory.
+The suite checks that `/members_only_articles` and `/members_only_articles/<id>` return `200` for a signed-in user, `401` after logout, and that the index includes only member-only articles.
